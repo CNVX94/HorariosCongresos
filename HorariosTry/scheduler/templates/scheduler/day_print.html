@@ -1,56 +1,34 @@
 {% extends 'base.html' %}
-
-{% block title %}Schedule for {{ day.date }}{% endblock %}
-
-{% block extra_head %}
-<style>
-    @media print {
-        .no-print {
-            display: none !important;
-        }
-
-        body {
-            background-color: white !important;
-        }
-
-        .card {
-            border: none !important;
-            box-shadow: none !important;
-        }
-    }
-</style>
-{% endblock %}
-
+{% block title %}Horario - {{ day.date }}{% endblock %}
 {% block content %}
-<div class="card shadow-sm mt-3">
-    <div class="card-header d-flex justify-content-between align-items-center bg-white">
-        <h3 class="mb-0">Schedule: {{ day.congress.name }} - {{ day.date|date:"l, F j, Y" }}</h3>
-        <button onclick="window.print()" class="btn btn-outline-secondary no-print">Print</button>
+<div class="card">
+    <div class="card-header">
+        <h2>{{ day.congress.name }} - {{ day.date }}</h2>
+        <button onclick="window.print()" class="btn btn-primary no-print">Imprimir</button>
     </div>
-    <div class="card-body p-0">
-        <table class="table table-striped mb-0">
-            <thead class="table-dark">
+    <div class="card-body">
+        <table class="table table-bordered">
+            <thead>
                 <tr>
-                    <th scope="col">Time</th>
-                    <th scope="col">Title</th>
-                    <th scope="col">Author</th>
+                    <th>Hora</th>
+                    {% for room in rooms %}
+                        <th>{{ room.name }}</th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
-                {% for slot in day.slots.all|dictsort:"start_time" %}
+                {% for item in slot_data %}
                 <tr>
-                    <td class="fw-bold">{{ slot.start_time|time:"H:i" }}</td>
-                    {% if slot.talk %}
-                    <td>{{ slot.talk.title }}</td>
-                    <td>{{ slot.talk.author_name }}</td>
-                    {% else %}
-                    <td class="text-muted fst-italic">Free Slot</td>
-                    <td>-</td>
-                    {% endif %}
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3" class="text-center py-4 text-muted">No slots available for this day.</td>
+                    <td>{{ item.slot.start_time|time:"H:i" }} - {{ item.slot.end_time|time:"H:i" }}</td>
+                    {% for talk in item.talks %}
+                    <td>
+                        {% if talk %}
+                            <strong>{{ talk.title }}</strong><br>{{ talk.author_name }}
+                        {% else %}
+                            <span class="text-muted">Libre</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
                 </tr>
                 {% endfor %}
             </tbody>

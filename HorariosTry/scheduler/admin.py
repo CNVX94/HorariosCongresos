@@ -1,14 +1,12 @@
 from django.contrib import admin
-from .models import Congress, Day, Slot, Talk, SLOT_MINS
+from .models import Congress, Day, Slot, Talk, Room, Reservation, SLOT_MINS
 
 class SlotInline(admin.TabularInline):
     model = Slot
     extra = 0
-    readonly_fields = ('start_time', 'duration_mins', 'talk')
+    readonly_fields = ('start_time', 'duration_mins')
     can_delete = False
-
-    def has_add_permission(self, request, obj):
-        return False
+    show_change_link = False
 
 class DayInline(admin.TabularInline):
     model = Day
@@ -27,20 +25,24 @@ class DayAdmin(admin.ModelAdmin):
     inlines = [SlotInline]
 
     def get_occupancy(self, obj):
-        cupo = (obj.hours_budget * 60) // SLOT_MINS
-        filled = obj.slots.filter(talk__isnull=False).count()
-        return f"{filled} / {cupo}"
-    get_occupancy.short_description = 'Occupancy'
+        total, occupied = obj.get_occupancy_stats()
+        return f"{occupied} / {total}"
+    get_occupancy.short_description = 'Ocupación'
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ('name', 'capacity')
 
 @admin.register(Slot)
 class SlotAdmin(admin.ModelAdmin):
-    list_display = ('day', 'start_time', 'duration_mins', 'talk_status')
-    list_filter = ('day',)
-
-    def talk_status(self, obj):
-        return obj.talk.title if obj.talk else "Free"
-    talk_status.short_description = 'Talk / Status'
+    list_display = ('day', 'start_time', 'duration_mins')
+    list_filter = ('day__congress', 'day')
 
 @admin.register(Talk)
 class TalkAdmin(admin.ModelAdmin):
     list_display = ('title', 'author_name', 'email', 'created_at')
+
+@admin.register(Reservation)
+class ReservationAdmin(admin.ModelAdmin):
+    list_display = ('talk', 'slot', 'room')
+    list_filter = ('room', 'slot__day')
