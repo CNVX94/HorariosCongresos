@@ -8,4 +8,5 @@ urlpatterns = [
     path('day/<int:pk>/', views.DayPrintView.as_view(), name='day_print'),
     path('success/', TemplateView.as_view(template_name="scheduler/success.html"), name='talk_success'),
     path('api/available-rooms/', views.available_rooms_api, name='available_rooms_api'),
+    path('api/available-slots/', views.available_slots_api, name='available_slots_api')
 ]

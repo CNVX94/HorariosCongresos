@@ -1,12 +1,11 @@
 from django.contrib import admin
-from .models import Congress, Day, Slot, Talk, Room, Reservation, SLOT_MINS
+from .models import Congress, Day, Slot, Talk, Room, Reservation, ActivityType, SLOT_MINS
 
 class SlotInline(admin.TabularInline):
     model = Slot
     extra = 0
     readonly_fields = ('start_time', 'duration_mins')
     can_delete = False
-    show_change_link = False
 
 class DayInline(admin.TabularInline):
     model = Day
@@ -46,3 +45,7 @@ class TalkAdmin(admin.ModelAdmin):
 class ReservationAdmin(admin.ModelAdmin):
     list_display = ('talk', 'slot', 'room')
     list_filter = ('room', 'slot__day')
+
+@admin.register(ActivityType)
+class ActivityTypeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')

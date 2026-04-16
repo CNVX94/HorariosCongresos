@@ -9,6 +9,7 @@ class Congress(models.Model):
     name = models.CharField(max_length=200)
     start_date = models.DateField()
     end_date = models.DateField()
+    rooms = models.ManyToManyField('Room', blank=True, related_name='congresses')
 
     def clean(self):
         if self.start_date > self.end_date:
@@ -33,29 +34,25 @@ class Day(models.Model):
         unique_together = ('congress', 'date')
 
     def clean(self):
-        # Validar que la fecha esté dentro del rango del congreso
         if self.date < self.congress.start_date or self.date > self.congress.end_date:
             raise ValidationError(f'La fecha debe estar entre {self.congress.start_date} y {self.congress.end_date}.')
 
     def save(self, *args, **kwargs):
-        self.full_clean()  # valida antes de guardar
+        self.full_clean()
         if self.pk:
             old = Day.objects.get(pk=self.pk)
             budget_changed = old.hours_budget != self.hours_budget
         else:
             budget_changed = False
         super().save(*args, **kwargs)
-        # Regenerar slots solo si es nuevo o cambió el presupuesto
         if budget_changed or not self.slots.exists():
             self.regenerate_slots()
 
     def regenerate_slots(self):
-        """Crea los slots de tiempo (sin salón) basados en hours_budget"""
-        # Borrar slots existentes (se perderán reservas, pero eso es coherente con cambio de presupuesto)
         self.slots.all().delete()
         total_minutes = self.hours_budget * 60
         num_slots = total_minutes // SLOT_MINS
-        start_time = datetime.combine(self.date, datetime.min.time()) + timedelta(hours=9)  # 9 AM
+        start_time = datetime.combine(self.date, datetime.min.time()) + timedelta(hours=9)
         slots_to_create = []
         for i in range(num_slots):
             slot_start = start_time + timedelta(minutes=i * SLOT_MINS)
@@ -63,9 +60,8 @@ class Day(models.Model):
         Slot.objects.bulk_create(slots_to_create)
 
     def get_occupancy_stats(self):
-        """Devuelve (total_slots, occupied_slots) considerando reservas"""
         total = self.slots.count()
-        occupied = Reservation.objects.filter(slot__day=self).values('slot').distinct().count()
+        occupied = Reservation.objects.filter(slot__day=self).count()
         return total, occupied
 
     def __str__(self):
@@ -83,10 +79,17 @@ class Slot(models.Model):
     def __str__(self):
         return f"{self.start_time.strftime('%H:%M')} - {self.end_time.strftime('%H:%M')}"
 
+class ActivityType(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
 class Talk(models.Model):
     title = models.CharField(max_length=200)
     author_name = models.CharField(max_length=150)
     email = models.EmailField()
+    activity_type = models.ForeignKey(ActivityType, on_delete=models.PROTECT, related_name='talks')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -94,12 +97,11 @@ class Talk(models.Model):
 
 class Reservation(models.Model):
     talk = models.OneToOneField(Talk, on_delete=models.CASCADE, related_name='reservation')
-    slot = models.OneToOneField(Slot, on_delete=models.CASCADE, related_name='reservation')  # OneToOne
+    slot = models.ForeignKey(Slot, on_delete=models.CASCADE, related_name='reservations')
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='reservations')
 
     class Meta:
-        # Ya no necesitamos unique_together porque slot ya es único con OneToOne
-        pass
+        unique_together = ('slot', 'room')  # seguridad extra
 
     def __str__(self):
         return f"{self.talk.title} - {self.slot.day.date} {self.slot} - {self.room.name}"

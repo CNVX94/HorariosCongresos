@@ -1,38 +1,78 @@
 {% extends 'base.html' %}
 {% block title %}Horario - {{ day.date }}{% endblock %}
+{% block extra_head %}
+<style>
+    @media print {
+        .no-print { display: none; }
+        .card { border: none; box-shadow: none; }
+        body { background: white; }
+    }
+    .table-schedule th {
+        background-color: #2d3748;
+        color: white;
+        position: sticky;
+        top: 0;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h2>{{ day.congress.name }} - {{ day.date }}</h2>
-        <button onclick="window.print()" class="btn btn-primary no-print">Imprimir</button>
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap border-0 pt-4 pb-2">
+        <div>
+            <h2 class="fw-bold">{{ day.congress.name }}</h2>
+            <h4 class="text-muted">{{ day.date|date:"l, j \d\e F \d\e Y" }}</h4>
+        </div>
+        <button onclick="window.print()" class="btn btn-primary no-print">
+            <i class="bi bi-printer"></i> Imprimir / PDF
+        </button>
     </div>
-    <div class="card-body">
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Hora</th>
-                    {% for room in rooms %}
-                        <th>{{ room.name }}</th>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-schedule mb-0">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Tipo</th>
+                        <th>Salón</th>
+                        <th>Capacidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for res in reservations %}
+                    <tr>
+                        <td class="fw-bold">{{ res.start_time|time:"H:i" }} - {{ res.end_time|time:"H:i" }}</td>
+                        <td>{{ res.title }}</td>
+                        <td>{{ res.author }}</td>
+                        <td>
+                            <span class="badge {% if res.activity_type == 'conferencia' %}bg-primary
+                                           {% elif res.activity_type == 'ponencia' %}bg-success
+                                           {% else %}bg-warning{% endif %}">
+                                {{ res.activity_type }}
+                            </span>
+                        </td>
+                        <td>{{ res.room_name }}</td>
+                        <td>{{ res.capacity }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-x fs-1"></i><br>
+                            No hay charlas programadas para este día.
+                        </td>
+                    </tr>
                     {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in slot_data %}
-                <tr>
-                    <td>{{ item.slot.start_time|time:"H:i" }} - {{ item.slot.end_time|time:"H:i" }}</td>
-                    {% for talk in item.talks %}
-                    <td>
-                        {% if talk %}
-                            <strong>{{ talk.title }}</strong><br>{{ talk.author_name }}
-                        {% else %}
-                            <span class="text-muted">Libre</span>
-                        {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
+    <div class="card-footer bg-white border-0 text-muted small py-3 no-print">
+        <i class="bi bi-info-circle"></i> Los horarios se muestran en orden cronológico.
+    </div>
+</div>
+<div class="mt-3 text-center no-print">
+    <a href="{% url 'home' %}" class="btn btn-link"><i class="bi bi-arrow-left"></i> Volver a la lista de días</a>
 </div>
 {% endblock %}
